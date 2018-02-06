@@ -1,0 +1,545 @@
+---
+title: " website Insights"
+output: html_document
+runtime: shiny
+---
+# <span style="color:red">Jheel's  Data Exercise</span> 
+#### QC has been commented and basically running View commands to check if logic is correct, you can run them in console if required
+##### Most of code is on echo=False to give a smoother UI
+
+```{r library_chunk,include=FALSE,echo=FALSE  }
+# This is the library chunk can be run after we install the packages from readme as running them in knit will give us errors
+
+library(dplyr)
+library(sqldf)
+library(rmarkdown)
+library(plotly)
+library(ggplot2)
+library(scales)
+library(RColorBrewer)
+library(stringr)
+library(hexbin)
+
+```
+
+```{r funtions_tab,echo=FALSE}
+DescriptiveProps <- function(x)
+ {
+  print(head(x))
+  print(str(x))
+  print(summary(x))
+}
+most_common <- function(x){ tail(sort(table(x)),n=10L) }
+most_common1 <- function(x){ tail(sort(table(x)),n=5L) }
+
+
+
+```
+```{r colors, echo=FALSE}
+darkcols <- brewer.pal(11, "PRGn")
+pastels <- brewer.pal(8,"Pastel1") 
+set3 <- brewer.pal(12,"Set3")
+purd <- brewer.pal(8,"PuRd")
+jColors <- c('chartreuse3', 'cornflowerblue', 'darkgoldenrod1', 'peachpuff3',
+             'mediumorchid2', 'turquoise3', 'wheat4', 'slategray2')
+rf <- colorRampPalette(rev(brewer.pal(11,'Spectral')))
+```
+
+```{r get_data,warning=FALSE,echo=FALSE}
+#accessing data
+#getwd()
+# position or folder where you have csv file is here in setwd()
+setwd("/Users/jheeldoshi/Downloads")
+# reading the csv file into a data frame know as df
+#Donot open the csv in Excel before loading it, it ruins the timestamp column.
+df <- read.csv("dataChallenge-master/safeAuto_data_challenge.csv",stringsAsFactors=FALSE)
+#exploratory analysis on data to see structure etc
+#DescriptiveProps(df)
+#discard the use of UserAgentString, as it is very fuzzy and would require extensive regex: can be used at a later point of time
+df$UserAgentString <- NULL
+
+```
+##### Thank you for clean data!  
+
+```{r echo=FALSE}
+#create dummy variables for the 4 important Pre-Quote Portal, Retrieve Premium step, Bind Start step, Payment Complete ste per userID + InteractionID
+df$Pre_Quote_Portal <- ifelse(df$Event == "Pre-Quote Portal",1,0)
+df$Retrieve_Premium <- ifelse(df$Event == "Retrieve Premium",1,0)
+df$Bind_Start <- ifelse(df$Event == "Bind Start",1,0)
+df$Pay_Complete <- ifelse(df$Event == "Payment Complete",1,0)
+
+```
+### Some high level analysis of parameters based upon which event(eg. Completed Payment) you want to see
+
+
+### Select which event you want to display and the parameter(eg. Browser) you want to view
+```{r Plot1,echo=FALSE}
+radioButtons("data", "Event",
+ c('Pre_Quote_Portal', 'Retrieve_Premium','Bind_Start','Pay_Complete')) 
+selectInput("variable", "Parameter:", c('State','Browser','DeviceBrand','DeviceIsMobile'))
+```
+
+### The plot gets displayed here
+```{r echo=FALSE,warning=FALSE}
+renderPlot( {   
+d<-input$data
+d1<-input$variable
+
+if(d=='Retrieve_Premium' & d1=='State')
+{
+barplot(most_common(df[df$Retrieve_Premium ==1, 3]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Retrieve_Premium' & d1=='Browser')
+{
+barplot(most_common(df[df$Retrieve_Premium ==1, 4]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Retrieve_Premium' & d1=='DeviceBrand')
+{
+barplot(most_common(df[df$Retrieve_Premium ==1, 7]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Retrieve_Premium' & d1=='DeviceIsMobile')
+{
+barplot(most_common(df[df$Retrieve_Premium ==1, 6]),col=darkcols, main="Plot",ylab="Number of records")
+}
+
+if(d=='Pre_Quote_Portal' & d1=='State')
+{
+barplot(most_common(df[df$Pre_Quote_Portal ==1, 3]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Pre_Quote_Portal' & d1=='Browser')
+{
+barplot(most_common(df[df$Pre_Quote_Portal ==1, 4]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Pre_Quote_Portal' & d1=='DeviceBrand')
+{
+barplot(most_common(df[df$Pre_Quote_Portal ==1, 7]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Pre_Quote_Portal' & d1=='DeviceIsMobile')
+{
+barplot(most_common(df[df$Pre_Quote_Portal ==1, 6]),col=darkcols, main="Plot",ylab="Number of records")
+}
+if(d=='Bind_Start')
+{
+  if(d1=='State')
+  {
+    barplot(most_common(df[df$Bind_Start ==1, 3]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+  if(d1=='Browser')
+  {
+    barplot(most_common(df[df$Bind_Start ==1, 4]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+  if(d1=='DeviceBrand')
+  {
+    barplot(most_common(df[df$Bind_Start ==1, 7]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+  if(d1=='DeviceIsMobile')
+  {
+    barplot(most_common(df[df$Bind_Start ==1, 6]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+}
+if(d=='Pay_Complete')
+{
+  if(d1=='State')
+  {
+    barplot(most_common(df[df$Pay_Complete ==1, 3]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+  if(d1=='Browser')
+  {
+    barplot(most_common(df[df$Pay_Complete ==1, 4]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+  if(d1=='DeviceBrand')
+  {
+    barplot(most_common(df[df$Pay_Complete ==1, 7]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+  if(d1=='DeviceIsMobile')
+  {
+    barplot(most_common(df[df$Pay_Complete ==1, 6]),col=darkcols, main="Plot",ylab="Number of records")
+  }
+}
+})    
+
+```
+
+
+```{r echo=FALSE,warning=FALSE}
+#Most of the R code exists here with multiple intermediate data frames and columns been created for extensive analysis
+df$RecordDateTime<-as.POSIXct(df$RecordDateTime,format="%Y-%m-%d %H:%M:%S")
+
+user_sess <- sqldf('Select InteractionId,julianday(max(RecordDateTime))-julianday(min(RecordDateTime)) as InteractionTimeInsessions from df group by 1 order by 1;')
+inter_sess <- sqldf('Select UserId,julianday(max(RecordDateTime))-julianday(min(RecordDateTime)) as Totalsess from df group by 1 order by 1;')
+# To check if query works well: QC View(df[df$UserId=="0x0086D4CD68D21D5F6972E09AEB1E8FB9" & df$InteractionId=="53842554",])
+
+#much easier to work on df_major
+df_major <- merge(x= df,y=user_sess,by=c("InteractionId"))
+df_major <- merge(x= df_major,y=inter_sess,by=c("UserId"))
+
+#cleaning up the data set
+#View(df_major[(grepl("tokenguid",tolower(df_major$InteractionId))),] )
+df_major[(grepl("tokenguid",tolower(df_major$InteractionId))),] <- NA
+df_major[(grepl("The underlying provider failed on Open.",df_major$InteractionId)),] <- NA
+df_major <- df_major[rowSums(is.na(df_major)) < 10, ]
+
+df_major$month <- months(df_major$RecordDateTime)
+df_major$day <- weekdays(df_major$RecordDateTime)
+df_major$date <- format(df_major$RecordDateTime, '%d')
+df_major$hour <- format(df_major$RecordDateTime, '%H')
+#not the most accurate way to calculate time to pay but for a brief overview, I am assuming this logic. Ideally logic should be different according to how many payment completes exist and from start to end of a users journey
+df_major$Timetopay <- ifelse(df_major$Pay_Complete!=0,df_major$InteractionTimeInsessions,0)
+
+# cleaning up data set
+# View(df_major[(grepl("server error",tolower(df_major$EventType))),] )
+df_major[(grepl("server error",tolower(df_major$EventType))),] <- NA
+
+#dummy variable for code convenience
+df_major$event.f <- as.numeric(factor(df_major$Event , levels=c("Pre-Quote Portal",
+ "Retrieve Premium", 
+ "Bind Start",
+ "Payment Complete", 
+ "Quote Start",                                                           
+ "Add Drivers",                                                           
+ "Retrieve Existing Policy",                                              
+ "Add Vehicles",                                                          
+ "Payment Start",                                                         
+ "Download Receipt",                                                      
+ "Referred to Phone Rep",                                                 
+ "Choose Coverage",                                                       
+ "Get Premium",                                                                                                          "#/howtopay"                                                          
+ )))
+#analysis on all of the unique user-interactions
+df_comp<- df_major[df_major$event.f== 4,]
+df_pre <- df_major[df_major$event.f ==1,]
+df_ret <- df_major[df_major$event.f ==2,]
+df_bin <- df_major[df_major$event.f ==3,]
+# QC View(df[df$UserId=="0x9A673F5DE5146FC8009A32D160FCD620" & df$Pre_Quote==1,])
+
+#t.test to find if there is a correlation between a high session oruser id time and whether you complete a purchase
+#t.test(df_major$InteractionTimeInsessions ~ df_major$Pay_comp)
+#plot(df_major$Pay_comp,df_major$InteractionTimeInsessions)
+
+device<- sqldf("select UserId, Count(Distinct(DeviceBrand)) from df_major group by 1 order by 1 ;")
+#to perform quality checks df_major[df_major$UserId==" 0x70A137A9A75F24F6B8CF3F6E10BE76D",]
+browser<- sqldf("select UserId, Count(Distinct(Browser)) from df_major group by 1 order by 1 ;")
+mobile <- sqldf("Select UserId, Count(Distinct(DeviceIsMobile)) from df_major group by 1 order by 1 ;")
+
+df_comp<- merge(df_comp,device,by="UserId")
+df_comp<- merge(df_comp,browser,by="UserId")
+df_comp<- merge(df_comp,mobile,by="UserId")
+
+df_pre<- merge(df_pre,device,by="UserId")
+df_pre<- merge(df_pre,browser,by="UserId")
+df_pre<- merge(df_pre,mobile,by="UserId")
+
+df_bin<- merge(df_bin,device,by="UserId")
+df_bin<- merge(df_bin,browser,by="UserId")
+df_bin<- merge(df_bin,mobile,by="UserId")
+
+df_ret<- merge(df_ret,device,by="UserId")
+df_ret<- merge(df_ret,browser,by="UserId")
+df_ret<- merge(df_ret,mobile,by="UserId")
+
+
+#to see variations of people who complete multiple events by one user
+df_major <- df_major %>% 
+  group_by(UserId) %>% 
+  mutate(Pre_Quote.new.user = sum (Pre_Quote_Portal)) %>%
+  mutate(Ret_Prem.new.user = sum (Retrieve_Premium)) %>%
+  mutate(Bind_Start.new.user = sum (Bind_Start)) %>%
+  mutate(Pay_comp.new.user = sum (Pay_Complete))
+
+#To get sum of people who finish complete events in one session
+df_major <- df_major %>% 
+  group_by(InteractionId) %>% 
+  mutate(Pre_Quote.new.inter = sum (Pre_Quote_Portal)) %>%
+  mutate(Ret_Prem.new.inter = sum (Retrieve_Premium)) %>%
+  mutate(Bind_Start.new.inter = sum (Bind_Start)) %>%
+  mutate(Pay_comp.new.inter = sum (Pay_Complete))
+
+#% of users that complete payment in first session
+#% of users that complete other things
+firstSess<- sqldf('SELECT a.InteractionId
+ FROM df_major a 
+         INNER JOIN
+         (         SELECT UserId, julianday(min(RecordDateTime)) as MinTime
+         FROM df_major
+         GROUP BY UserId
+         ) b ON a.UserId = b.UserId AND
+             julianday(a.RecordDateTime) = julianday(b.MinTime); ')
+firstSess$firstSess <- 1
+df_major<- merge(df_major,firstSess,all.x=T)
+#next step takes a while 10s to run, removal of NA's always takes time
+df_major<-df_major[-which(is.na(df_major$UserId)),]
+df_major[ , 33][is.na(df_major[ , 33] ) ] <- 0 
+
+```
+
+### Choose the time parameter(eg. Hour) you want to filter by and the column(eg. State) you want to visualize in
+```{r plot2,echo=FALSE}
+radioButtons("dataTime", "Event",
+ c('month', 'hour','date','day'),selected = 'hour') 
+selectInput("variable1", "Parameter:", c('State','Browser','DeviceBrand','DeviceIsMobile'))
+
+```
+
+
+```{r echo=FALSE,warning=FALSE}
+renderPlot({   
+d2<-input$dataTime
+d3<-input$variable1
+
+if(d2=='day')
+{
+  if(d3 == 'State')
+  {
+plotgg<- ggplot(df_major , aes(day, fill = State)) + geom_bar()+
+  labs(title = "day wise breakdown of Events in each state ", x = "day", y = "Number of Records")
+print(plotgg)
+  }
+   if(d3 == 'Browser')
+  {
+plotgg<- ggplot(df_major , aes(day, fill = Browser)) + geom_bar()+
+  labs(title = "day wise breakdown of Events in each Browser ", x = "day", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceBrand')
+  {
+plotgg<- ggplot(df_major , aes(day, fill = DeviceBrand)) + geom_bar()+
+  labs(title = "day wise breakdown of Events in each DeviceBrand ", x = "day", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceIsMobile')
+  {
+plotgg<- ggplot(df_major , aes(day, fill = DeviceIsMobile)) + geom_bar()+
+  labs(title = "day wise breakdown of Events in each DeviceIsMobile ", x = "day", y = "Number of Records")
+print(plotgg)
+  }
+}
+if(d2=='month')
+{
+  if(d3 == 'State')
+  {
+plotgg<- ggplot(df_major , aes(month, fill = State)) + geom_bar()+
+  labs(title = "day wise breakdown of Events in each state ", x = "month", y = "Number of Records")
+print(plotgg)
+  }
+   if(d3 == 'Browser')
+  {
+plotgg<- ggplot(df_major , aes(month, fill = Browser)) + geom_bar()+
+  labs(title = "Month wise breakdown of Events in each Browser ", x = "month", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceBrand')
+  {
+plotgg<- ggplot(df_major , aes(month, fill = DeviceBrand)) + geom_bar()+
+  labs(title = "Month wise breakdown of Events in each DeviceBrand ", x = "month", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceIsMobile')
+  {
+plotgg<- ggplot(df_major , aes(month, fill = DeviceIsMobile)) + geom_bar()+
+  labs(title = "month wise breakdown of Events in each DeviceIsMobile ", x = "month", y = "Number of Records")
+print(plotgg)
+  }
+}
+if(d2=='hour')
+{
+  if(d3 == 'State')
+  {
+plotgg<- ggplot(df_major , aes(hour, fill = State)) + geom_bar()+
+  labs(title = "hour wise breakdown of Events in each state ", x = "hour", y = "Number of Records")
+print(plotgg)
+  }
+   if(d3 == 'Browser')
+  {
+plotgg<- ggplot(df_major , aes(hour, fill = Browser)) + geom_bar()+
+  labs(title = "hour wise breakdown of Events in each Browser ", x = "hour", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceBrand')
+  {
+plotgg<- ggplot(df_major , aes(hour, fill = DeviceBrand)) + geom_bar()+
+  labs(title = "hour wise breakdown of Events in each DeviceBrand ", x = "hour", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceIsMobile')
+  {
+plotgg<- ggplot(df_major , aes(hour, fill = DeviceIsMobile)) + geom_bar()+
+  labs(title = "hour wise breakdown of Events in each DeviceIsMobile ", x = "hour", y = "Number of Records")
+print(plotgg)
+  }
+}
+
+if(d2=='date')
+{
+  if(d3 == 'State')
+  {
+plotgg<- ggplot(df_major , aes(date, fill = State)) + geom_bar()+
+  labs(title = "date wise breakdown of Events in each state ", x = "date", y = "Number of Records")
+print(plotgg)
+  }
+   if(d3 == 'Browser')
+  {
+plotgg<- ggplot(df_major , aes(date, fill = Browser)) + geom_bar()+
+  labs(title = "date wise breakdown of Events in each Browser ", x = "date", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceBrand')
+  {
+plotgg<- ggplot(df_major , aes(date, fill = DeviceBrand)) + geom_bar()+
+  labs(title = "date wise breakdown of Events in each DeviceBrand ", x = "date", y = "Number of Records")
+print(plotgg)
+   }
+   if(d3 == 'DeviceIsMobile')
+  {
+plotgg<- ggplot(df_major , aes(date, fill = DeviceIsMobile)) + geom_bar()+
+  labs(title = "date wise breakdown of Events in each DeviceIsMobile ", x = "date", y = "Number of Records")
+print(plotgg)
+  }
+}
+
+}) 
+
+```
+
+## Charecteristic of users who perform one of the 4 main events(eg Bind start or complete payment) in the first session
+#### Massive report can easily be turned into excel or tableau visualization
+#### Logical way to look is see if numbers change within group and between groups
+```{r, echo=FALSE,warning=FALSE}
+
+
+for(n in 3:9)
+{
+m<- (as.data.frame(most_common1(df_major[df_major$firstSess==1 & df_major$event.f==1,n])))
+print("The people who completed their event prequote in thier first session for: ")
+print(colnames(df[n]))
+print(m)
+m1<- (as.data.frame(most_common1(df_major[df_major$firstSess==1 & df_major$event.f== 2,n])))
+print("The people who completed their event retrieve price in thier first session for: ")
+print(colnames(df[n]))
+print(m1)
+m2<- (as.data.frame(most_common1(df_major[df_major$firstSess==1 & df_major$event.f== 3,n])))
+print("The people who completed their event bind start in thier first session for: ")
+print(colnames(df[n]))
+print(m2)
+m3<- (as.data.frame(most_common1(df_major[df_major$firstSess==1 & df_major$event.f== 4,n])))
+print("The people who completed their event completed payment in thier first session for: ")
+print(colnames(df[n]))
+print(m3)
+}
+
+
+```
+
+## Looking at Numbers of devices usage for people for people who completed payments
+
+  
+```{r echo=FALSE,warning=FALSE}
+ds <- ggplot(df_comp, aes(`Count(Distinct(DeviceBrand))` ,fill=State)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for completeing payment per state ", x = "States", y = "Number of Devices")
+   print(ds)
+   
+  ds1 <- ggplot(df_comp, aes(`Count(Distinct(DeviceBrand))` ,fill=Browser)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for completeing payment per Browser ", x = "Browser", y = "Number of Devices")
+   print(ds1)
+
+ds2 <- ggplot(df_comp, aes(`Count(Distinct(DeviceBrand))` ,fill=DeviceBrand)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for completeing payment per deviceBrand ", x = "DeviceBrand", y = "Number of Devices")
+   print(ds2)
+
+ds3 <- ggplot(df_comp, aes(`Count(Distinct(DeviceBrand))` ,fill=DeviceIsMobile)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for completeing payment per DeviceIsMobile ", x = "DeviceIsMobile", y = "Number of Devices")
+   print(ds3)
+ 
+
+```
+
+## Looking at device usage for people for people who Bind Started 
+* After this point my shiny stopped responding *
+
+  
+```{r echo=FALSE,warning=FALSE}
+bds <- ggplot(df_bin, aes(`Count(Distinct(DeviceBrand))` ,fill=State)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for who Bind Started per state ", x = "States", y = "Number of Devices")
+   print(bds)
+   
+  bds1 <- ggplot(df_bin, aes(`Count(Distinct(DeviceBrand))` ,fill=Browser)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for who Bind Started per Browser ", x = "Browser", y = "Number of Devices")
+   print(bds1)
+
+bds2 <- ggplot(df_bin, aes(`Count(Distinct(DeviceBrand))` ,fill=DeviceBrand)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for who Bind Started per deviceBrand ", x = "DeviceBrand", y = "Number of Devices")
+   print(bds2)
+
+bds3 <- ggplot(df_bin, aes(`Count(Distinct(DeviceBrand))` ,fill=DeviceIsMobile)) + geom_bar()+ 
+  labs(title = "Number of Unique Devices used for who Bind Started per DeviceIsMobile ", x = "DeviceIsMobile", y = "Number of Devices")
+   print(bds3)
+ 
+
+```
+
+### Looking at People who have performed multiple events in a particular session,
+####  Concentrating on completing Payments in this section  
+#### Similarly can be done for other 3 main events such as bind_start
+
+```{r echo=FALSE,warning=FALSE}
+
+pds <- ggplot(df_major[df_major$Pay_comp.new.inter > 1,], aes(Pay_comp.new.inter ,fill=State)) + geom_bar()+ 
+  labs(title = "Number of completed payments per state in a single session ", x = "States", y = "Number of completed Payment")
+   print(pds)
+   print("WE can clearly see the outlier at 15 and 17 and they should be examined")
+   
+   pds1 <- ggplot(df_major[df_major$Pay_comp.new.inter > 1,], aes(Pay_comp.new.inter,fill=Browser)) + geom_bar()+ 
+  labs(title = "Number of completed payments per browser in a single session ", x = "browser", y = "Number of completed Payment")
+   print(pds1)
+  
+    pds2 <- ggplot(df_major[df_major$Pay_comp.new.inter > 1,], aes(Pay_comp.new.inter,fill=DeviceBrand)) + geom_bar()+ 
+  labs(title = "Number of completed payments per DeviceBrand in a single session ", x = "DeviceBrand", y = "Number of completed Payment")
+   print(pds2)
+   
+
+```
+
+### Looking at people who have completed multiple payments
+#### Similarly can be done for other 3 main events such as bind_start
+```{r echo=FALSE,warning=FALSE}
+
+xpds <- ggplot(df_major[df_major$Pay_comp.new.user > 1,], aes(Pay_comp.new.user ,fill=State)) + geom_bar()+ 
+  labs(title = "Number of completed payments per state by a single user ", x = "States", y = "Number of completed Payment")
+   print(xpds)
+   print("WE can clearly see the outlier at 15 and 17 and they should be examined")
+   
+   xpds1 <- ggplot(df_major[df_major$Pay_comp.new.user > 1,], aes(Pay_comp.new.user,fill=Browser)) + geom_bar()+ 
+  labs(title = "Number of completed payments per browser by a single user ", x = "browser", y = "Number of completed Payment")
+   print(xpds1)
+  
+    xpds2 <- ggplot(df_major[df_major$Pay_comp.new.user > 1,], aes(Pay_comp.new.user,fill=DeviceBrand)) + geom_bar()+ 
+  labs(title = "Number of completed payments per DeviceBrand by a single user ", x = "DeviceBrand", y = "Number of completed Payment")
+   print(xpds2)
+   
+
+```
+
+## Interesting Insights: 
+#### Notice the outliers! These scatter plots take time to run 
+```{r echo=FALSE,warning=FALSE}
+ff<- ggplot(df_major, aes(day,Timetopay))+ geom_point(aes(color = State)) +
+                theme_bw() + labs(title="Scatterplot of time taken to complete the transaction by day colored by state")
+ff
+
+ff2 <-  ggplot(df_major, aes(DeviceIsMobile,Timetopay))+ geom_point(aes(color = day)) +
+                theme_bw() + labs(title="Scatterplot of time taken to complete the transaction by mobility of device colored by day")
+
+ff2
+
+ff3 <-  ggplot(df_major, aes(day,InteractionTimeInsessions))+ geom_point(aes(color = Browser)) +
+                theme_bw() + labs(title="Scatterplot of amount of time spent on website by day colored by Browser")
+
+ff3
+
+
+ff4 <-ggplot(df_major, aes(Browser,InteractionTimeInsessions))+ geom_point(aes(color = day)) +
+                theme_bw() + labs(title="Scatterplot of amount of time spent on website by browser colored by day")
+
+ff4
+
+```
+## THANK YOU FOR THIS VERY INTERESTING DATA EXERCISE
